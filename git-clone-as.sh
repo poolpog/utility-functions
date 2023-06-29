@@ -13,6 +13,8 @@ set -x
 set -e
 
 function usage(){
+    set +x
+    echo
     echo "Usage: ${0} <ssh_clone_uri> <email> <ssh_key_name>"
     echo
     echo "This script uses email for both git user.name and git user.email"
@@ -21,34 +23,39 @@ function usage(){
     exit 1
 }
 
+if [[ -z "$1" ]]; then
+    usage
+fi
+
 DEST=$( echo $1 | awk -F'[/.]' '{print $(NF-1)}' )
-NAME=$2
+NAME=$( echo $2 | awk -F'@' '{print $1}' )
 EMAIL=$2
-KEY=$3
+KEY=~/.ssh/$3
 
 if [[ -d $DEST ]]; then
     set +x
     echo
     echo "Directory [$DEST] already exists; check it"
     echo
-    exit 1
+    usage
 fi
 
 if [[ ! -f $KEY ]]; then
     set +x
     echo
-    echo "SSH Key [$KEY] does not exist; check for presence of ~/.ssh/$KEY"
+    echo "SSH Key [$KEY] does not exist or is not a file; check for presence of ~/.ssh/$KEY"
     echo
-    exit 1
+    usage
 fi
 
 mkdir "$DEST"
 cd "$DEST"
 
 git init
-git config --local core.sshcommand "ssh -i ~/.ssh/$KEY -F /dev/null"
-git config --local user.name "$NAME"
-git config --local user.email "$EMAIL"
-git config --local push.autosetupremotes true
+git config core.sshcommand "ssh -i $KEY -F /dev/null"
+git config user.name "$NAME"
+git config user.email "$EMAIL"
+git config push.autosetupremotes true
 git remote add origin "$1"
 git pull origin master
+git push --set-upstream origin master
